@@ -1,0 +1,6 @@
+gpg --armor --batch --yes --export manuke@manuke.co > keys/sender.pub
+gpg --armor --batch --yes --export-secret-keys manuke@manuke.co > keys/sender.sec
+gpg --armor --batch --yes --export otanko@nasu.co > keys/recip.pub
+gpg --armor --batch --yes --export-secret-keys otanko@nasu.co > keys/recip.sec
+  
+  

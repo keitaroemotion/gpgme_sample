@@ -1,0 +1,87 @@
+#!/usr/bin/env ruby
+
+require "gpgme"
+require "tempfile"
+require "fileutils"
+
+def show_engine_info
+    engine = GPGME::Engine.info.first
+    puts "binary:      #{engine.file_name}"
+    puts "version:     #{engine.version}"
+    puts "req_version: #{engine.req_version}"
+    puts "protocol:    #{engine.protocol}"
+    puts "home_dir:    #{engine.home_dir}"
+end    
+
+binary   = "bin/gpg"
+home_dir = "home_dir"
+
+raise "gpg binary missing. #{binary}" unless File.exist?(binary)
+
+GPGME::Engine.set_info(0, binary, home_dir)
+
+FileUtils.remove_dir home_dir if File.directory?(home_dir)
+FileUtils.mkdir_p    home_dir
+Dir["#{home_dir}/*"].each { |file|FileUtils.cp file, home_dir }
+
+sender_secret_key = File.read("keys/sender.sec")
+recip_public_key = File.read("keys/recip.pub")
+
+p GPGME::Key.import(recip_public_key).imports
+p GPGME::Key.import(sender_secret_key).imports
+
+sender_secret_key_imported = GPGME::Key.import(sender_secret_key).imports[0]
+recip_public_key_imported = GPGME::Key.import(recip_public_key).imports[0]
+
+show_engine_info
+
+p recip_public_key_imported
+
+plain = GPGME::Data.new("fuck you")
+
+output_sign    = "sign.txt.pgp"
+output_no_sign = "no_sign.txt.pgp"
+
+def encrypt_no_sign(plain, recip_public_key_imported, output_no_sign)
+    file = File.open(output_no_sign, "w")
+    file.write GPGME::Crypto.encrypt(
+        plain,
+        recipients:   [recip_public_key_imported.fpr],
+        always_trust: true
+    )
+    file.close
+end    
+
+def encrypt_sign(plain, sender_secret_key_imported,
+  recip_public_key_imported, output_sign)
+
+    file = File.open(output_sign, "w")
+    file.write GPGME::Crypto
+        .new(pinentry_mode: GPGME::PINENTRY_MODE_LOOPBACK)
+        .encrypt(
+            plain,
+            sign:         true,
+            signers:      [sender_secret_key_imported.fpr],   
+            recipients:   [recip_public_key_imported.fpr],
+            always_trust: true
+        )
+    file.close
+end    
+
+#
+# assume that we do not need any passphrase to encrypt
+#
+encrypt_no_sign plain, recip_public_key_imported, output_no_sign
+# encrypt_sign    plain, sender_secret_key_imported,
+#     recip_public_key_imported, output_sign
+    
+recip_secret_key          = File.read("keys/recip.sec")
+recip_secret_key_imported = GPGME::Key.import(recip_secret_key).imports[0]
+
+#
+# assume that we do not need any passphrase to decrypt
+# XXX somehow passphrase input is necessary at this point
+#
+
+p GPGME::Crypto
+    .decrypt(GPGME::Data.new(File.read(output_no_sign))).to_s
