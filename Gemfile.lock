@@ -1,0 +1,14 @@
+GEM
+  specs:
+    gpgme (2.0.13)
+      mini_portile2 (~> 2.1)
+    mini_portile2 (2.2.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  gpgme (~> 2.0)
+
+BUNDLED WITH
+   1.15.2

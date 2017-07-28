@@ -13,7 +13,7 @@ def show_engine_info
     puts "home_dir:    #{engine.home_dir}"
 end    
 
-binary   = "bin/gpg"
+binary   = "bin/gpg-1.4.23"
 home_dir = "home_dir"
 
 raise "gpg binary missing. #{binary}" unless File.exist?(binary)
@@ -78,10 +78,18 @@ encrypt_no_sign plain, recip_public_key_imported, output_no_sign
 recip_secret_key          = File.read("keys/recip.sec")
 recip_secret_key_imported = GPGME::Key.import(recip_secret_key).imports[0]
 
+def passfunc(*args)
+  fd = args.last
+  io = IO.for_fd(fd, 'w')
+  io.puts "moomin"
+  io.flush
+end
+
 #
 # assume that we do not need any passphrase to decrypt
 # XXX somehow passphrase input is necessary at this point
 #
 
 p GPGME::Crypto
+    .new(passphrase_callback: method(:passfunc))
     .decrypt(GPGME::Data.new(File.read(output_no_sign))).to_s
